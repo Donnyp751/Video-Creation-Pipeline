@@ -1,0 +1,19 @@
+name: sister
+display_name: Sister
+age: 3
+description: Sweet, giggly three-year-old girl.
+physical:
+  hair: brown hair
+  hairstyle: two pigtails
+  bows: pink bows
+  eyes: brown eyes
+  build: small, round toddler proportions
+clothing:
+  dress: yellow dress
+  shoes: white shoes
+personality: shy at first, then laughs a lot
+never_change:
+  - hairstyle
+  - bow color
+  - dress color
+  - eye color

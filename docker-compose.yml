@@ -1,0 +1,16 @@
+# Local-first: one container, your repo directory mounted as the workspace.
+#   docker compose up --build        -> dashboard on http://localhost:8000
+#   docker compose run --rm app kidsvideo status fruit-song
+services:
+  app:
+    build: .
+    env_file: .env
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - ./projects:/workspace/projects
+      - ./assets:/workspace/assets
+      - ./config:/workspace/config
+      - ./data:/workspace/data
+    environment:
+      KIDSVIDEO_HOME: /workspace

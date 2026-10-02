@@ -1,0 +1,73 @@
+# Pipeline configuration. Values here are merged over built-in defaults.
+# Secrets do NOT belong here; they come from .env.
+# Prices are rough estimates in USD used for cost tracking; adjust to your plans.
+# Render presets may also set `intro:` / `outro:` to a video file (workspace-relative).
+models:
+  openai_llm: gpt-5
+  openai_vision: gpt-5
+  openai_image: gpt-image-1
+  openai_image_quality: medium
+  openai_transcription: whisper-1
+  elevenlabs_music: music_v1
+  runway_video: gen4_turbo
+pricing:
+  openai:
+    gpt-5:
+      input_per_1m: 1.25
+      output_per_1m: 10.0
+    gpt-image-1:
+      per_image: 0.063
+    whisper-1:
+      per_minute: 0.006
+  elevenlabs:
+    music_v1:
+      per_minute: 0.8
+  runway:
+    gen4_turbo:
+      per_second: 0.05
+render_presets:
+  youtube:
+    resolution: 1920x1080
+    fps: 30
+    crf: 18
+    x264_preset: medium
+    audio_bitrate: 192k
+    fit: pad
+    crossfade: 0.4
+    burn_subtitles: false
+    allow_stills: false
+    loudnorm: true
+  youtube_shorts:
+    resolution: 1080x1920
+    fps: 30
+    crf: 18
+    x264_preset: medium
+    audio_bitrate: 192k
+    fit: crop
+    crossfade: 0.4
+    burn_subtitles: true
+    allow_stills: false
+    loudnorm: true
+  preview:
+    resolution: 854x480
+    fps: 24
+    crf: 30
+    x264_preset: veryfast
+    audio_bitrate: 96k
+    fit: pad
+    crossfade: 0.4
+    burn_subtitles: true
+    allow_stills: true
+    loudnorm: true
+concurrency:
+  images: 3
+  videos: 2
+  reviews: 4
+qc:
+  duration_tolerance_s: 0.5
+  target_lufs: -14.0
+  lufs_tolerance: 3.0
+  max_black_s: 1.0
+  max_silence_s: 4.0
+llm_max_attempts: 3
+thumbnail_candidates: 3

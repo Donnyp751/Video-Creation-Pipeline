@@ -1,0 +1,19 @@
+name: brother
+display_name: Brother
+age: 4
+description: Cheerful, curious four-year-old boy.
+physical:
+  hair: fluffy black hair
+  eyes: large brown eyes
+  skin: warm light-tan skin
+  build: small, round toddler proportions
+clothing:
+  top: green t-shirt
+  bottom: blue shorts
+  shoes: white sneakers
+personality: energetic, loves pointing at things
+never_change:
+  - hairstyle
+  - green t-shirt
+  - blue shorts
+  - eye color

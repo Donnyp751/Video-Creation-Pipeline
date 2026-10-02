@@ -1,0 +1,19 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+
+# local state
+data/
+
+# generated project media (project.yaml / json artifacts stay trackable)
+projects/**/*.png
+projects/**/*.jpg
+projects/**/*.wav
+projects/**/*.mp3
+projects/**/*.mp4
