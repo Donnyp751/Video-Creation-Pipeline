@@ -1,0 +1,53 @@
+project:
+  id: fruit-song-zh
+  title: "这是什么水果？"
+  target_age_min: 2
+  target_age_max: 5
+  aspect_ratio: "16:9"
+  resolution: "1920x1080"
+  fps: 30
+
+languages:
+  primary: zh
+  secondary: en
+  script: simplified      # or: traditional
+  romanization: true      # add a pinyin line above the characters in subtitles
+
+creative:
+  topic: fruit
+  learning_goal: "Teach common fruit names in Mandarin and English"
+  tone: cheerful
+  duration_target_seconds: 120
+
+characters:
+  - id: brother
+    reference: assets/characters/brother/front.png
+    description: >
+      Four-year-old boy, fluffy black hair,
+      large brown eyes, green t-shirt,
+      blue shorts.
+
+  - id: sister
+    reference: assets/characters/sister/front.png
+    description: >
+      Three-year-old girl, two pigtails,
+      pink bows, yellow dress.
+
+environment:
+  default: farm
+  reference: assets/environments/farm.png
+  description: >
+    Sunny green farm with a red barn, wooden fence and fruit trees.
+
+style:
+  description: >
+    Cute soft 3D toddler cartoon,
+    bright cheerful colors,
+    warm sunny lighting.
+
+providers:
+  llm: openai
+  image: openai
+  music: elevenlabs
+  video: runway
+  speech: openai

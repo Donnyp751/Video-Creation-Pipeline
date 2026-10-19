@@ -7,6 +7,7 @@ from typing import Literal
 from pydantic import BaseModel, Field, model_validator
 
 from app.models.project import ProjectSpec
+from app.utils.scripts import check_chinese_text, has_cjk, is_chinese
 
 Section = Literal["intro", "verse", "pre_chorus", "chorus", "bridge", "outro"]
 
@@ -24,6 +25,10 @@ class LyricLine(BaseModel):
     sung: str = Field(min_length=1, description="Exactly what is sung, mixing languages as sung")
     primary: str = Field(min_length=1, description="The line in the primary language")
     secondary: str = Field(min_length=1, description="The line in the secondary language")
+    romanization: str = Field(
+        default="",
+        description="Pinyin for the Chinese line (only when a language is Chinese), else empty",
+    )
 
 
 class ObjectSpec(BaseModel):
@@ -98,4 +103,27 @@ def validate_plan_against_spec(plan: CreativePlan, spec: ProjectSpec) -> list[st
             errors.append(f"scene {scene.id}: duplicate characters")
     if len(plan.scenes) < 4:
         errors.append("plan must have at least 4 scenes")
+    errors += _script_errors(plan, spec)
     return errors
+
+
+def _script_errors(plan: CreativePlan, spec: ProjectSpec) -> list[str]:
+    """Each language must be written in its own script (e.g. Chinese in 汉字, not pinyin)."""
+    langs = spec.languages
+    errors: list[str] = []
+    chinese_fields = [f for f, code in (("primary", langs.primary), ("secondary", langs.secondary))
+                      if is_chinese(code)]
+    if not chinese_fields:
+        return errors
+    for line in plan.lyrics:
+        for field in chinese_fields:
+            if err := check_chinese_text(getattr(line, field), f"line {line.id} '{field}'"):
+                errors.append(err)
+        if not has_cjk(line.sung):
+            errors.append(f"line {line.id} 'sung': the Chinese words must be written in Chinese "
+                          f"characters (汉字), not pinyin: {line.sung!r}")
+        if langs.romanization and not line.romanization.strip():
+            errors.append(f"line {line.id}: 'romanization' (pinyin with tone marks) is required")
+        if line.romanization and has_cjk(line.romanization):
+            errors.append(f"line {line.id}: 'romanization' must be pinyin, not characters")
+    return errors[:20]

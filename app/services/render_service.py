@@ -18,8 +18,9 @@ from app.services.scene_assets import selected_file
 from app.services.subtitles import write_subtitles
 from app.utils.ffmpeg import has_audio, media_duration, run_ffmpeg
 from app.utils.files import now_iso, write_json, write_text
+from app.utils.scripts import DEFAULT_SUBTITLE_FONT, subtitle_font
 
-SUBTITLE_STYLE = ("FontName=DejaVu Sans,FontSize=20,PrimaryColour=&H00FFFFFF,"
+SUBTITLE_STYLE = ("FontName={font},FontSize=20,PrimaryColour=&H00FFFFFF,"
                   "OutlineColour=&H00000000,BorderStyle=1,Outline=2,Shadow=0,MarginV=28")
 
 
@@ -77,6 +78,7 @@ def build_render_plan(
     preset: RenderPreset,
     *,
     subtitles_file: str | None = None,
+    subtitle_font: str = DEFAULT_SUBTITLE_FONT,
     intro: Segment | None = None,
     outro: Segment | None = None,
 ) -> RenderPlan:
@@ -121,7 +123,7 @@ def build_render_plan(
 
     if subtitles_file:
         graph.append(f"[main_v]subtitles=filename={subtitles_file}:"
-                     f"force_style='{SUBTITLE_STYLE}'[main_vs]")
+                     f"force_style='{SUBTITLE_STYLE.format(font=subtitle_font)}'[main_vs]")
         main_v = "main_vs"
     else:
         main_v = "main_v"
@@ -226,6 +228,7 @@ async def render(ctx: PipelineContext, preset_name: str = "preview") -> Path:
     plan = build_render_plan(
         clips, paths.song.resolve(), storyboard.duration, preset,
         subtitles_file=sub_name,
+        subtitle_font=subtitle_font(ctx.spec.languages.codes, ctx.spec.languages.script),
         intro=await _segment(ctx, preset.intro),
         outro=await _segment(ctx, preset.outro),
     )

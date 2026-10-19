@@ -8,6 +8,7 @@ from app.models.review import LanguageReview
 from app.pipeline.context import PipelineContext
 from app.services.creative_director import lang_name
 from app.utils.files import read_json, sha256_file, write_json
+from app.utils.scripts import is_chinese, script_name
 
 SYSTEM_PROMPT = """\
 You are a meticulous bilingual {primary}/{secondary} editor and early-childhood educator \
@@ -17,9 +18,19 @@ reviewing song lyrics for children aged {age_min}-{age_max}. Check every line fo
 - whether both languages teach exactly the same concept
 - age-appropriate words and pronunciation difficulty for toddlers
 - useful repetition (not too little, not tedious) and overall age appropriateness
+{script_rules}
 Report concrete issues with the lyric line id and a specific suggested replacement. Set "pass" \
 to false if any medium or high severity issue exists. Do not rewrite the song.
 """
+
+
+def _review_script_rules(spec) -> str:
+    langs = spec.languages
+    for code in langs.codes:
+        if is_chinese(code):
+            return (f"- that Chinese is written in {script_name(code, langs.script)} (flag pinyin "
+                    "or the wrong character set) and that any pinyin has correct tone marks")
+    return ""
 
 
 async def review_lyrics(ctx: PipelineContext, *, force: bool = False) -> LanguageReview:
@@ -36,6 +47,7 @@ async def review_lyrics(ctx: PipelineContext, *, force: bool = False) -> Languag
         secondary=lang_name(spec.languages.secondary),
         age_min=spec.project.target_age_min,
         age_max=spec.project.target_age_max,
+        script_rules=_review_script_rules(spec),
     )
     context = {
         "learning_goal": spec.creative.learning_goal,

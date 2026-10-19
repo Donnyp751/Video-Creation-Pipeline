@@ -12,6 +12,7 @@ import unicodedata
 from difflib import SequenceMatcher
 
 from app.models.timing import TimedLine, Word
+from app.utils.scripts import CJK
 
 _PUNCT = re.compile(r"[^\w\s]", re.UNICODE)
 
@@ -23,8 +24,40 @@ def normalize_token(token: str) -> str:
     return _PUNCT.sub("", token).strip()
 
 
+def _pieces(word: str) -> list[str]:
+    """Split one whitespace-delimited word; each Chinese character becomes its own piece,
+    because Chinese is written without spaces between words."""
+    out: list[str] = []
+    buf = ""
+    for ch in word:
+        if CJK.match(ch):
+            if buf:
+                out.append(buf)
+                buf = ""
+            out.append(ch)
+        else:
+            buf += ch
+    if buf:
+        out.append(buf)
+    return out
+
+
 def tokenize(text: str) -> list[str]:
-    return [t for t in (normalize_token(w) for w in text.split()) if t]
+    return [t for t in (normalize_token(p) for w in text.split() for p in _pieces(w)) if t]
+
+
+def timed_tokens(words: list[Word]) -> list[tuple[str, Word]]:
+    """Tokenize transcript words, splitting multi-character Chinese words evenly in time."""
+    out: list[tuple[str, Word]] = []
+    for w in words:
+        toks = tokenize(w.text)
+        if not toks:
+            continue
+        step = (w.end - w.start) / len(toks)
+        for i, tok in enumerate(toks):
+            out.append((tok, Word(text=tok, start=w.start + i * step,
+                                  end=w.start + (i + 1) * step)))
+    return out
 
 
 def align_lines(
@@ -42,8 +75,7 @@ def align_lines(
         lyric_tokens += toks
         owner += [idx] * len(toks)
 
-    trans = [(normalize_token(w.text), w) for w in words]
-    trans = [(t, w) for t, w in trans if t]
+    trans = timed_tokens(words)
     trans_tokens = [t for t, _ in trans]
 
     matched: dict[int, list[Word]] = {}

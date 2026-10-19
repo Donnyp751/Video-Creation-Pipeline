@@ -10,13 +10,35 @@ from app.models.state import Gate
 from app.pipeline.context import PipelineContext
 from app.services.character_bible import load_bibles
 from app.utils.files import list_versions, read_json, write_json
+from app.utils.scripts import is_chinese, script_name
 
 LANGUAGE_NAMES = {"vi": "Vietnamese", "en": "English", "es": "Spanish", "fr": "French",
-                  "zh": "Chinese", "ja": "Japanese", "ko": "Korean", "de": "German"}
+                  "zh": "Mandarin Chinese", "ja": "Japanese", "ko": "Korean", "de": "German"}
 
 
 def lang_name(code: str) -> str:
     return LANGUAGE_NAMES.get(code, code)
+
+
+def script_rules(spec) -> str:
+    """Extra prompt rules for languages with their own writing system (e.g. Chinese)."""
+    langs = spec.languages
+    rules = []
+    for field, code in (("primary", langs.primary), ("secondary", langs.secondary)):
+        if is_chinese(code):
+            rules.append(
+                f"- `{field}` and the Chinese words in `sung` MUST be written in "
+                f"{script_name(code, langs.script)}. NEVER write pinyin there."
+            )
+            if langs.romanization:
+                rules.append("- `romanization`: pinyin with tone marks for the Chinese line "
+                             "(e.g. \"píng guǒ\"). Required for every line.")
+            else:
+                rules.append("- `romanization`: optional pinyin with tone marks; leave empty if "
+                             "unsure.")
+    if not rules:
+        rules.append("- `romanization`: leave empty.")
+    return "\n".join(rules)
 
 
 SYSTEM_PROMPT = """\
@@ -36,6 +58,7 @@ teaching the same concept).
 pointed at). Avoid text/signs in scenes.
 - motion_prompt: small, gentle movements suitable for a 5-10 second image-to-video clip.
 - Do not describe characters' appearance or art style; that is injected separately.
+{script_rules}
 """
 
 
@@ -76,6 +99,7 @@ async def generate_plan(ctx: PipelineContext, *, force: bool = False) -> Creativ
         secondary=lang_name(spec.languages.secondary),
         age_min=spec.project.target_age_min,
         age_max=spec.project.target_age_max,
+        script_rules=script_rules(spec),
     )
     result = await ctx.llm("lyrics").generate_structured(
         system,

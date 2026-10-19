@@ -13,18 +13,16 @@ from typing import Any
 from app.providers.common import Usage
 from app.providers.llm.base import ChatMessage, LLMProvider, LLMResponse
 
-_VOCAB = {
-    ("vi", "en"): [
-        ("Quả táo", "apple", "The apple is red"),
-        ("Quả chuối", "banana", "The banana is yellow"),
-        ("Quả cam", "orange", "The orange is round"),
-        ("Quả dâu", "strawberry", "The strawberry is sweet"),
-        ("Quả nho", "grapes", "Purple grapes"),
-        ("Quả dưa hấu", "watermelon", "A big watermelon"),
-        ("Quả xoài", "mango", "A juicy mango"),
-        ("Quả lê", "pear", "A green pear"),
-    ]
+# Fruit vocabulary per language; pinyin for Chinese.
+_WORDS = {
+    "vi": ["Quả táo", "Quả chuối", "Quả cam", "Quả dâu", "Quả nho", "Quả dưa hấu", "Quả xoài",
+           "Quả lê"],
+    "en": ["apple", "banana", "orange", "strawberry", "grapes", "watermelon", "mango", "pear"],
+    "zh": ["苹果", "香蕉", "橙子", "草莓", "葡萄", "西瓜", "芒果", "梨"],
+    "es": ["la manzana", "el plátano", "la naranja", "la fresa", "las uvas", "la sandía",
+           "el mango", "la pera"],
 }
+_PINYIN = ["píng guǒ", "xiāng jiāo", "chéng zi", "cǎo méi", "pú tao", "xī guā", "máng guǒ", "lí"]
 
 
 def extract_context(messages: list[ChatMessage]) -> dict[str, Any]:
@@ -39,29 +37,34 @@ def extract_context(messages: list[ChatMessage]) -> dict[str, Any]:
 
 def _plan(ctx: dict[str, Any]) -> dict[str, Any]:
     langs = ctx.get("languages", {"primary": "vi", "secondary": "en"})
-    vocab = _VOCAB.get((langs["primary"], langs["secondary"])) or [
-        (f"{langs['primary']} word {i}", f"word {i}", f"Sentence {i}") for i in range(1, 9)
-    ]
+    prim_lang, sec_lang = langs["primary"], langs["secondary"]
+
+    def word(lang: str, i: int) -> str:
+        return _WORDS[lang][i] if lang in _WORDS else f"{lang} word {i + 1}"
+
     chars = [c["id"] for c in ctx.get("characters", [])]
-    n = max(4, min(len(vocab), int(ctx.get("duration_target_seconds", 60)) // 6))
+    n = max(4, min(len(_PINYIN), int(ctx.get("duration_target_seconds", 60)) // 6))
+    chinese = "zh" in (prim_lang, sec_lang)
     lyrics, scenes = [], []
-    for i, (prim, sec, sentence) in enumerate(vocab[:n], start=1):
+    for i in range(n):
+        prim, sec, en = word(prim_lang, i), word(sec_lang, i), _WORDS["en"][i]
         lyrics.append({
-            "id": i,
-            "section": "chorus" if i % 4 == 0 else "verse",
+            "id": i + 1,
+            "section": "chorus" if (i + 1) % 4 == 0 else "verse",
             "sung": f"{prim}, {sec}!",
             "primary": f"{prim}!",
-            "secondary": f"{sentence}!",
+            "secondary": f"{sec}!",
+            "romanization": _PINYIN[i] if chinese else "",
         })
-        who = chars[(i - 1) % len(chars)] if chars else None
+        who = chars[i % len(chars)] if chars else None
         scenes.append({
-            "id": i,
-            "lyric_line_ids": [i],
-            "characters": chars if i % 3 == 0 else ([who] if who else []),
-            "action": f"{who or 'A child'} holds up one {sec} and smiles at the viewer.",
+            "id": i + 1,
+            "lyric_line_ids": [i + 1],
+            "characters": chars if (i + 1) % 3 == 0 else ([who] if who else []),
+            "action": f"{who or 'A child'} holds up one {en} and smiles at the viewer.",
             "composition": "medium shot, character centered",
-            "objects": [{"name": sec, "count": 1, "description": ""}],
-            "motion_prompt": f"{who or 'The child'} gently lifts the {sec} and blinks happily.",
+            "objects": [{"name": en, "count": 1, "description": ""}],
+            "motion_prompt": f"{who or 'The child'} gently lifts the {en} and blinks happily.",
             "camera": "slow push in",
         })
     return {

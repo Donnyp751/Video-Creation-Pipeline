@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from math import isclose
 from pathlib import Path
+from typing import Literal
 
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -59,6 +60,9 @@ class ProjectInfo(_Strict):
 class Languages(_Strict):
     primary: str = Field(min_length=2, max_length=8)
     secondary: str = Field(min_length=2, max_length=8)
+    # Chinese only: which characters to write, and whether to add a pinyin line to subtitles.
+    script: Literal["simplified", "traditional"] = "simplified"
+    romanization: bool = False
 
     @model_validator(mode="after")
     def _distinct(self) -> Languages:

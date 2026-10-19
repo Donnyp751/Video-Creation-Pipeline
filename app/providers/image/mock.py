@@ -8,9 +8,12 @@ from PIL import Image, ImageDraw, ImageFont
 
 from app.providers.common import Usage
 from app.providers.image.base import GeneratedImage, ImageProvider
+from app.utils.scripts import cjk_font_file, has_cjk
 
 
-def _font(size: int) -> ImageFont.ImageFont | ImageFont.FreeTypeFont:
+def _font(size: int, text: str = "") -> ImageFont.ImageFont | ImageFont.FreeTypeFont:
+    if has_cjk(text) and (cjk := cjk_font_file()):
+        return ImageFont.truetype(str(cjk[0]), size, index=cjk[1])
     try:
         return ImageFont.truetype("DejaVuSans.ttf", size)
     except OSError:
@@ -48,7 +51,7 @@ class MockImage(ImageProvider):
             draw.line([(0, y), (w, y)], fill=tuple(int(c * (1 - 0.5 * k)) for c in top))
         scene = prompt.split("SCENE:", 1)[-1].split("\n\n", 1)[0].strip() or prompt[:200]
         text = "\n".join(textwrap.wrap(scene, 48)[:6]) + f"\n\n[mock v{variant}]"
-        draw.multiline_text((40, 40), text, fill=(255, 255, 255), font=_font(max(18, h // 24)))
+        draw.multiline_text((40, 40), text, fill=(255, 255, 255), font=_font(max(18, h // 24), text))
         output.parent.mkdir(parents=True, exist_ok=True)
         img.save(output, "PNG")
         return GeneratedImage(model=self.model, usage=Usage(units=1, unit_type="images"),

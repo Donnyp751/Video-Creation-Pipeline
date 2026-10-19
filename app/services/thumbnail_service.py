@@ -14,6 +14,7 @@ from app.pipeline.context import PipelineContext, PipelineError
 from app.services.character_bible import load_bibles, reference_images
 from app.services.prompt_compiler import compile_thumbnail_prompt
 from app.utils.files import list_versions, write_json, write_text
+from app.utils.scripts import cjk_font_file, has_cjk
 
 THUMB_SIZE = (1280, 720)
 FONT_CANDIDATES = [
@@ -48,6 +49,7 @@ def _wrap(draw: ImageDraw.ImageDraw, text: str, font, max_width: int) -> list[st
 
 
 def overlay_title(artwork: Path, title: str, output: Path, font_path: Path | None,
+                  font_index: int = 0,
                   subtitle: str | None = None) -> Path:
     img = Image.open(artwork).convert("RGB")
     # Cover-fit to 16:9 thumbnail size.
@@ -61,7 +63,7 @@ def overlay_title(artwork: Path, title: str, output: Path, font_path: Path | Non
     max_w = int(THUMB_SIZE[0] * 0.42)
     size = 130
     while True:
-        font = (ImageFont.truetype(str(font_path), size) if font_path
+        font = (ImageFont.truetype(str(font_path), size, index=font_index) if font_path
                 else ImageFont.load_default(size=size))
         lines = _wrap(draw, title, font, max_w)
         line_h = int(size * 1.15)
@@ -76,7 +78,7 @@ def overlay_title(artwork: Path, title: str, output: Path, font_path: Path | Non
         y += line_h
     if subtitle:
         sub_size = max(28, size // 3)
-        sub_font = (ImageFont.truetype(str(font_path), sub_size) if font_path
+        sub_font = (ImageFont.truetype(str(font_path), sub_size, index=font_index) if font_path
                     else ImageFont.load_default(size=sub_size))
         draw.text((52, y + 8), subtitle, font=sub_font, fill=(255, 255, 255),
                   stroke_width=3, stroke_fill=(30, 30, 90))
@@ -112,7 +114,11 @@ def select_candidate(ctx: PipelineContext, version: int, *, title: str | None = 
         raise PipelineError(f"no thumbnail candidate v{version}")
     plan = ctx.plan()
     title = title or plan.title
-    out = overlay_title(src, title, d / "selected.png", find_font(ctx),
+    subtitle = plan.title_secondary or None
+    font_path, font_index = find_font(ctx), 0
+    if has_cjk(title + (subtitle or "")) and (cjk := cjk_font_file(ctx.spec.languages.script)):
+        font_path, font_index = cjk  # Latin-only fonts would draw empty boxes for 汉字
+    out = overlay_title(src, title, d / "selected.png", font_path, font_index,
                         subtitle=plan.title_secondary or None)
     write_json(d / "selection.json", {"candidate": version, "title": title})
     return out
